@@ -2,7 +2,7 @@
 import os
 from flask import Flask, request, jsonify
 import pyotp
-from conversiones import hex_to_base32  # Importar la función desde conversiones.py
+from conversiones import process_secret  # Importa la función para el procesamiento
 
 app = Flask(__name__)
 
@@ -12,29 +12,26 @@ def home():
 
 @app.route('/validar_totp', methods=['POST'])
 def validar_totp():
-    try:
-        # Obtener el secreto y el código proporcionado desde el cuerpo de la solicitud
-        data = request.get_json()
-        secreto = data.get('secreto')
-        codigo = data.get('codigo')
+    # Obtener el secreto y el código proporcionado desde el cuerpo de la solicitud
+    data = request.get_json()
+    secreto = data.get('secreto')
+    codigo = data.get('codigo')
 
-        if not secreto or not codigo:
-            return jsonify({"error": "Faltan parámetros"}), 400
+    if not secreto or not codigo:
+        return jsonify({"error": "Faltan parámetros"}), 400
 
-        # Aquí ahora no necesitas hacer conversión si el secreto ya está en base32
-        # Se espera que el secreto sea base32, por lo que lo pasamos directamente
-        secreto_base32 = secreto  # No necesitas convertir si ya está en base32
+    # Procesar el secreto para convertirlo a Base32 si es necesario
+    secreto_base32 = process_secret(secreto)
 
-        # Validar el código TOTP
-        totp = pyotp.TOTP(secreto_base32)
-        if totp.verify(codigo):
-            return jsonify({"valid": True}), 200
-        else:
-            return jsonify({"valid": False}), 200
+    if secreto_base32 is None:
+        return jsonify({"error": "Secreto no válido (no es hexadecimal ni Base32)"}), 400
 
-    except Exception as e:
-        # Manejo de errores
-        return jsonify({"error": str(e)}), 500
+    # Validar el código TOTP
+    totp = pyotp.TOTP(secreto_base32)
+    if totp.verify(codigo):
+        return jsonify({"valid": True}), 200
+    else:
+        return jsonify({"valid": False}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('port', 5000)), debug=True)
