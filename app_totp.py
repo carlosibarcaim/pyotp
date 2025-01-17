@@ -1,7 +1,8 @@
+# app.py
 import os
 from flask import Flask, request, jsonify
 import pyotp
-from conversiones import hex_to_base32
+from conversiones import hex_to_base32  # Importar la función desde conversiones.py
 
 app = Flask(__name__)
 
@@ -20,15 +21,17 @@ def validar_totp():
         if not secreto or not codigo:
             return jsonify({"error": "Faltan parámetros"}), 400
 
-        secreto_base32 = hex_to_base32(secreto)
+        # Aquí ahora no necesitas hacer conversión si el secreto ya está en base32
+        # Se espera que el secreto sea base32, por lo que lo pasamos directamente
+        secreto_base32 = secreto  # No necesitas convertir si ya está en base32
 
         # Validar el código TOTP
-        totp = pyotp.TOTP(secreto)
+        totp = pyotp.TOTP(secreto_base32)
         if totp.verify(codigo):
             return jsonify({"valid": True}), 200
         else:
             return jsonify({"valid": False}), 200
-    
+
     except Exception as e:
         # Manejo de errores
         return jsonify({"error": str(e)}), 500
